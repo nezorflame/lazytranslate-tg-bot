@@ -12,18 +12,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-type messageType uint8
-
-const (
-	typeMessage messageType = iota
-	typeQuery
-)
-
-var (
-	errBadMessage = errors.New("bad message")
-	errNotMessage = errors.New("not a message")
-)
-
 type botClient struct {
 	tgClient   *tgbotapi.BotAPI
 	gtClient   *translate.Client

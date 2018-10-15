@@ -1,0 +1,9 @@
+linters:
+  disable:
+    - megacheck
+  enable:
+    - goimports
+# temporary fix for modules
+run:
+  skip-files:
+    - ".*/pkg/mod/.*$"
