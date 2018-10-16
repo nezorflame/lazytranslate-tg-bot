@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 	"strings"
 
@@ -56,7 +57,7 @@ func (b *botClient) listenUpdates(ctx context.Context, config *appConfig) error 
 				errChan := make(chan error)
 				updateCtx, cancel := context.WithTimeout(ctx, config.ctxTimeout)
 				defer cancel()
-				go b.parseUpdate(updateCtx, errChan, u)
+				go b.parseUpdate(updateCtx, errChan, u.Message)
 
 				select {
 				case err := <-errChan:
@@ -72,36 +73,54 @@ func (b *botClient) listenUpdates(ctx context.Context, config *appConfig) error 
 	return nil
 }
 
-func (b *botClient) parseUpdate(ctx context.Context, errChan chan error, u *tgbotapi.Update) {
+func (b *botClient) parseUpdate(ctx context.Context, errChan chan error, m *tgbotapi.Message) {
 	// try to detect target message and language
-	targetLang, msgText, ok := b.detectTargets(u.Message)
+	var tag string
+	targetLang, msgText, ok := b.detectTargets(m)
 	if !ok {
 		// check if mesage was a reply, return if not
-		if u.Message.ReplyToMessage == nil {
+		if m.ReplyToMessage == nil {
 			errChan <- nil
 			return
 		}
-		// use previously detected language and the original message text
-		msgText = u.Message.ReplyToMessage.Text
+
+		// using previously detected language and new text
+		msgText = m.ReplyToMessage.Text
+
+		// check if the reply was a translation itself
+		if m.ReplyToMessage.From.ID == b.tgClient.Self.ID {
+			msgParts := strings.SplitN(msgText, "\n", 2)
+			if len(msgParts) > 1 {
+				tag = fmt.Sprintf(strings.Replace(msgParts[0], "]", " -> \"%s\"]", 1), targetLang)
+				msgText = msgParts[1]
+			}
+		}
 	}
 	log.Printf("[%s] %s", targetLang, msgText)
 
-	// Translate the text into the target language
-	lang, translation, err := b.doTranslate(ctx, targetLang, msgText)
+	// translate the text into the target language
+	lang, msgText, err := b.doTranslate(ctx, targetLang, msgText)
 	if err != nil {
 		errChan <- errors.Wrap(err, "unable to translate the message")
 		return
 	}
-	log.Printf("Translation: %s", translation)
+	log.Printf("Translation: %s", msgText)
 
-	msg := tgbotapi.NewMessage(u.Message.Chat.ID, fmt.Sprintf("[%s -> %s]\n%s", lang, targetLang, translation))
-	msg.ReplyToMessageID = u.Message.MessageID
+	// add tag if present
+	if tag != "" {
+		msgText = fmt.Sprintf("%s\n%s", tag, msgText)
+	} else {
+		msgText = fmt.Sprintf("[\"%s\" -> \"%s\"]\n%s", lang, targetLang, msgText)
+	}
+
+	msg := tgbotapi.NewMessage(m.Chat.ID, msgText)
+	msg.ReplyToMessageID = m.MessageID
 	if _, err := b.tgClient.Send(msg); err != nil {
 		errChan <- errors.Wrap(err, "unable to send the message")
 		return
 	}
 
-	// All is good
+	// all is good
 	errChan <- nil
 	return
 }
@@ -139,13 +158,16 @@ func (b *botClient) detectTargets(msg *tgbotapi.Message) (language.Tag, string, 
 }
 
 func (b *botClient) doTranslate(ctx context.Context, targetLang language.Tag, text string) (string, string, error) {
+	// translate
 	translations, err := b.gtClient.Translate(ctx, []string{text}, targetLang, nil)
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to translate text")
 	} else if len(translations) < 1 {
 		return "", "", errors.New("no translations")
 	}
-	return translations[0].Source.String(), translations[0].Text, nil
+
+	// result is escaped - unescape
+	return translations[0].Source.String(), html.UnescapeString(translations[0].Text), nil
 }
 
 func intInSlice(s int, ss []int) bool {
