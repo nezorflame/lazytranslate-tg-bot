@@ -29,5 +29,11 @@ Bot requires Go 1.11+ as it's using Go modules as a dependency management tool:
 
 ```bash
 export GO111MODULE=on
-go get github.com/nezorflame/lazytranslate-tg-bot
+git clone https://github.com/nezorflame/lazytranslate-tg-bot.git
+cd lazytranslate-tg-bot
+# create env variables
+# or edit .env file:
+# cp example.env .env && nano .env
+go build
+./lazytranslate-tg-bot
 ```
