@@ -16,9 +16,9 @@ Either
 | GOOGLE_APPLICATION_CREDENTIALS | `string` | Yes | - | Google Translate API credentials, see more [here](https://cloud.google.com/translate/docs/) |
 | LAZYTRANSLATE_TG_WHITELIST | `string` (comma-separated `[]int`) | Yes | - | List of Telegram user IDs |
 | LAZYTRANSLATE_TG_TOKEN | `string` | Yes | - | Your Telegram bot token |
-| LAZYTRANSLATE_PROXY_ADDR | `string` | Yes | - | Proxy address URL |
-| LAZYTRANSLATE_PROXY_USER | `string` | Yes | - | Proxy username |
-| LAZYTRANSLATE_PROXY_PASS | `string` | Yes | - | Proxy password |
+| LAZYTRANSLATE_PROXY_ADDR | `string` | No | - | Proxy address URL (skipped if URL is empty) |
+| LAZYTRANSLATE_PROXY_USER | `string` | No | - | Proxy username (required if URL is not empty) |
+| LAZYTRANSLATE_PROXY_PASS | `string` | No | - | Proxy password (required if URL is not empty) |
 | LAZYTRANSLATE_DEFAULT_LANG | `string` | No | 'en' | Default language for translations |
 | LAZYTRANSLATE_UPDATE_TIMEOUT | `int` | No | 60 | Timeout for Telegram updates (in seconds) |
 | LAZYTRANSLATE_RESPONSE_TIMEOUT | `time.Duration` | No | '1m' | Context timeout (for bot operations) |

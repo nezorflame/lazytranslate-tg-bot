@@ -66,15 +66,16 @@ func loadConfig() (*appConfig, error) {
 		return nil, errors.Errorf(msgBadEnv, envPrefix, envTelegramWhitelist)
 	}
 
-	if config.proxyAddress = viper.GetString(envProxyAddress); config.proxyAddress == "" {
-		return nil, errors.Errorf(msgBadEnv, envPrefix, envProxyAddress)
-	}
+	// can be empty, then proxy is not enabled
+	config.proxyAddress = viper.GetString(envProxyAddress)
 
-	if config.proxyUser = viper.GetString(envProxyUsername); config.proxyUser == "" {
+	// can't be empty if proxy URl isn't
+	if config.proxyUser = viper.GetString(envProxyUsername); config.proxyAddress != "" && config.proxyUser == "" {
 		return nil, errors.Errorf(msgBadEnv, envPrefix, envProxyUsername)
 	}
 
-	if config.proxyPass = viper.GetString(envProxyPassword); config.proxyPass == "" {
+	// can't be empty if proxy URl isn't
+	if config.proxyPass = viper.GetString(envProxyPassword); config.proxyAddress != "" && config.proxyPass == "" {
 		return nil, errors.Errorf(msgBadEnv, envPrefix, envProxyPassword)
 	}
 

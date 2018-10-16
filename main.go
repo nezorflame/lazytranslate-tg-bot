@@ -38,19 +38,23 @@ func main() {
 	defer bot.gtClient.Close()
 	log.Print("Connected to the Google Translate API")
 
-	// Create a SOCKS5 proxy dialer
-	dialer, err := proxy.SOCKS5("tcp", config.proxyAddress, &proxy.Auth{
-		User: config.proxyUser, Password: config.proxyPass}, proxy.Direct,
-	)
-	if err != nil {
-		log.Fatalf("Can't connect to the proxy: %v", err)
-	}
-	log.Print("Proxy dialer initiated")
+	// Setup a custom HTTP client with a SOCKS5 proxy dialer (if enabled)
+	httpClient := http.DefaultClient
+	if config.proxyAddress != "" {
+		log.Print("Proxy is enabled")
+		// enabling proxy
+		dialer, err := proxy.SOCKS5("tcp", config.proxyAddress, &proxy.Auth{
+			User: config.proxyUser, Password: config.proxyPass}, proxy.Direct,
+		)
+		if err != nil {
+			log.Fatalf("Can't connect to the proxy: %v", err)
+		}
 
-	// Setup a custom HTTP client with proxy dialer
-	httpTransport := &http.Transport{}
-	httpTransport.Dial = dialer.Dial
-	httpClient := &http.Client{Transport: httpTransport}
+		httpClient = &http.Client{Transport: &http.Transport{Dial: dialer.Dial}}
+		log.Print("Proxy dialer initiated")
+	} else {
+		log.Print("Proxy is disabled")
+	}
 
 	// Init the Telegram bot
 	tgClient, err := tgbotapi.NewBotAPIWithClient(config.tgToken, httpClient)
