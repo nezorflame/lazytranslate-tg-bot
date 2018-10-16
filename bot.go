@@ -142,6 +142,8 @@ func (b *botClient) doTranslate(ctx context.Context, targetLang language.Tag, te
 	translations, err := b.gtClient.Translate(ctx, []string{text}, targetLang, nil)
 	if err != nil {
 		return "", "", errors.Wrap(err, "failed to translate text")
+	} else if len(translations) < 1 {
+		return "", "", errors.New("no translations")
 	}
 	return translations[0].Source.String(), translations[0].Text, nil
 }
