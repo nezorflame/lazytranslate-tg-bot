@@ -5,14 +5,15 @@ go:
   - "1.11"
 env:
   global:
+    - GO111MODULE=on
     - PATH=$PATH:$GOPATH/bin
     - GOLANGCILINT=v1.10.2
 install:
-  - GO111MODULE=on go build
+  - go build
 before_script:
-  - go get github.com/mgechev/revive
+  - GO111MODULE=auto go get github.com/mgechev/revive
 script:
-  - GO111MODULE=on go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-  - GO111MODULE=on revive
+  - go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+  - revive
 after_success:
   - bash <(curl -s https://codecov.io/bash) || echo 'Codecov failed to upload.'
