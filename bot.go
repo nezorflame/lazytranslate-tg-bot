@@ -130,7 +130,7 @@ func (b *botClient) detectTargets(msg *tgbotapi.Message) (language.Tag, string, 
 		lang, err := language.Parse(strings.Trim(msgWords[1], `"`))
 		if err != nil {
 			// bot name and message text
-			return b.targetLang, strings.Join(msgWords[1:], " "), false
+			return b.targetLang, strings.Join(msgWords[1:], " "), true
 		}
 
 		// bot name, language and message text
