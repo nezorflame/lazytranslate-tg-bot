@@ -1,0 +1,22 @@
+ctx_timeout = "1m"
+whitelist = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+]
+
+[telegram]
+token = "your:telegram_bot_token"
+timeout = 60
+
+[proxy]
+address = "your.socks5.proxy:12345"
+user = "proxy_user"
+pass = "proxy_pass"
+
+[google_api]
+cred_path = './translate_api_credentials.json'
+timeout = "2m"
+default_lang = "en"

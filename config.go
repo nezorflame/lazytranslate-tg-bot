@@ -3,99 +3,77 @@ package main
 import (
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 )
 
 const (
-	msgBadEnv            = "empty %s_%s env"
-	envPrefix            = "LAZYTRANSLATE"
-	envTelegramToken     = "TG_TOKEN"
-	envTelegramWhitelist = "TG_WHITELIST"
-	envProxyAddress      = "PROXY_ADDR"
-	envProxyUsername     = "PROXY_USER"
-	envProxyPassword     = "PROXY_PASS"
-	envDefaultLang       = "DEFAULT_LANG"
-	envUpdateTimeout     = "UPDATE_TIMEOUT"   // in seconds
-	envResponseTimeout   = "RESPONSE_TIMEOUT" // in seconds
+	msgEmptyValue      = "empty config value '%s'"
+	defaultCtxTimeout  = 30 * time.Second
+	defaultTGTimeout   = 60
+	defaultRespTimeout = 2 * time.Minute
+	defaultLang        = "en"
 )
 
-type appConfig struct {
-	tgToken       string
-	tgWhitelist   []int
-	proxyAddress  string
-	proxyUser     string
-	proxyPass     string
-	defaultLang   string
-	updateTimeout int
-	ctxTimeout    time.Duration
+var mandatoryParams = []string{
+	"whitelist",
+	"telegram.token",
+	"google_api.cred_path",
 }
 
-func loadConfig() (*appConfig, error) {
-	viper.SetEnvPrefix(envPrefix)
-	viper.AutomaticEnv()
-
-	// load dotenv file if present
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Error loading .env file: %v", err)
+func loadConfig(name string) *viper.Viper {
+	if name == "" {
+		log.Fatal("empty config name")
 	}
 
-	config := &appConfig{}
+	cfg := viper.New()
 
-	// mandatory first
-	if config.tgToken = viper.GetString(envTelegramToken); config.tgToken == "" {
-		return nil, errors.Errorf(msgBadEnv, envPrefix, envTelegramToken)
+	cfg.SetConfigName(name)
+	cfg.SetConfigType("toml")
+	cfg.AddConfigPath("$HOME/.config")
+	cfg.AddConfigPath("/etc")
+	cfg.AddConfigPath(".")
+
+	if err := cfg.ReadInConfig(); err != nil {
+		log.Panicf("Unable to read config file: %v", err)
+	}
+	cfg.WatchConfig()
+
+	cfg.SetDefault("ctx_timeout", defaultCtxTimeout)
+	cfg.SetDefault("telegram.timeout", time.Duration(defaultTGTimeout)*time.Second)
+	cfg.SetDefault("google_api.timeout", defaultRespTimeout)
+	cfg.SetDefault("google_api.default_lang", defaultLang)
+
+	if err := validateConfig(cfg); err != nil {
+		log.Panicf("Unable to validate config: %v", err)
 	}
 
-	if whitelist := viper.GetString(envTelegramWhitelist); whitelist != "" {
-		// check and fill ID whitelist
-		var err error
-		listSlice := strings.Split(whitelist, ",")
-		config.tgWhitelist = make([]int, len(whitelist), len(whitelist))
-		for i := range listSlice {
-			config.tgWhitelist[i], err = strconv.Atoi(listSlice[i])
-			if err != nil {
-				return nil, errors.Errorf("bad whitelist value '%s'", listSlice[i])
-			}
+	return cfg
+}
+
+func validateConfig(cfg *viper.Viper) error {
+	if cfg == nil {
+		return errors.New("config is nil")
+	}
+
+	for _, p := range mandatoryParams {
+		if cfg.Get(p) == nil {
+			return errors.Errorf(msgEmptyValue, p)
 		}
-	} else {
-		return nil, errors.Errorf(msgBadEnv, envPrefix, envTelegramWhitelist)
 	}
 
-	// can be empty, then proxy is not enabled
-	config.proxyAddress = viper.GetString(envProxyAddress)
-
-	// can't be empty if proxy URl isn't
-	if config.proxyUser = viper.GetString(envProxyUsername); config.proxyAddress != "" && config.proxyUser == "" {
-		return nil, errors.Errorf(msgBadEnv, envPrefix, envProxyUsername)
+	whitelist := cfg.GetStringSlice("whitelist")
+	if len(whitelist) < 1 {
+		return errors.Errorf("'whitelist' should contain at least one record")
 	}
 
-	// can't be empty if proxy URl isn't
-	if config.proxyPass = viper.GetString(envProxyPassword); config.proxyAddress != "" && config.proxyPass == "" {
-		return nil, errors.Errorf(msgBadEnv, envPrefix, envProxyPassword)
+	for _, id := range whitelist {
+		if _, err := strconv.Atoi(id); err != nil {
+			return errors.Errorf("bad whitelist id '%s'", id)
+		}
 	}
 
-	// set to "en" if empty
-	if config.defaultLang = viper.GetString(envDefaultLang); config.defaultLang == "" {
-		config.defaultLang = "en"
-		log.Printf(msgBadEnv+" - setting default value to 'en'", envPrefix, envDefaultLang)
-	}
-
-	// set to 60 if empty
-	if config.updateTimeout = viper.GetInt(envUpdateTimeout); config.updateTimeout == 0 {
-		config.updateTimeout = 60
-		log.Printf(msgBadEnv+" - setting default value to 60", envPrefix, envUpdateTimeout)
-	}
-
-	// set to 2m if empty
-	if config.ctxTimeout = viper.GetDuration(envResponseTimeout); config.ctxTimeout == 0 {
-		config.ctxTimeout = 2 * time.Minute
-		log.Printf(msgBadEnv+" - setting default value to 2m", envPrefix, envResponseTimeout)
-	}
-
-	return config, nil
+	return nil
 }

@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 
+	"google.golang.org/api/option"
+
 	"cloud.google.com/go/translate"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"golang.org/x/net/proxy"
 	"golang.org/x/text/language"
 )
@@ -15,22 +18,22 @@ func main() {
 	// load config and do preparation
 	ctx := context.Background()
 
-	log.Print("Loading config from environment")
-	config, err := loadConfig()
-	if err != nil {
-		log.Fatalf("Unable to load config from environment: %v", err)
-	}
+	configName := flag.String("config", "config", "Config file name")
+	flag.Parse()
 
-	targetLang, err := language.Parse(config.defaultLang)
+	log.Print("Loading config")
+	cfg := loadConfig(*configName)
+
+	targetLang, err := language.Parse(cfg.GetString("google_api.default_lang"))
 	if err != nil {
 		log.Fatalf("Unable to parse the target language: %v", err)
 	}
 
-	bot := &botClient{targetLang: targetLang}
+	bot := &botClient{cfg: cfg, targetLang: targetLang}
 	log.Print("Starting the bot")
 
 	// Create a Google Translate client
-	gtClient, err := translate.NewClient(ctx)
+	gtClient, err := translate.NewClient(ctx, option.WithCredentialsFile(cfg.GetString("google_api.cred_path")))
 	if err != nil {
 		log.Fatalf("Failed to create Google Translate client: %v", err)
 	}
@@ -40,14 +43,19 @@ func main() {
 
 	// Setup a custom HTTP client with a SOCKS5 proxy dialer (if enabled)
 	httpClient := http.DefaultClient
-	if config.proxyAddress != "" {
+	if proxyAddress := cfg.GetString("proxy.address"); proxyAddress != "" {
 		log.Print("Proxy is enabled")
 		// enabling proxy
-		dialer, err := proxy.SOCKS5("tcp", config.proxyAddress, &proxy.Auth{
-			User: config.proxyUser, Password: config.proxyPass}, proxy.Direct,
+		dialer, sErr := proxy.SOCKS5("tcp",
+			proxyAddress,
+			&proxy.Auth{
+				User:     cfg.GetString("proxy.user"),
+				Password: cfg.GetString("proxy.pass"),
+			},
+			proxy.Direct,
 		)
-		if err != nil {
-			log.Fatalf("Can't connect to the proxy: %v", err)
+		if sErr != nil {
+			log.Fatalf("Can't connect to the proxy: %v", sErr)
 		}
 
 		httpClient = &http.Client{Transport: &http.Transport{Dial: dialer.Dial}}
@@ -57,7 +65,7 @@ func main() {
 	}
 
 	// Init the Telegram bot
-	tgClient, err := tgbotapi.NewBotAPIWithClient(config.tgToken, httpClient)
+	tgClient, err := tgbotapi.NewBotAPIWithClient(cfg.GetString("telegram.token"), httpClient)
 	if err != nil {
 		log.Fatalf("Unable to init Telegram bot: %v", err)
 	}
@@ -65,5 +73,5 @@ func main() {
 	log.Print("Bot ready")
 
 	// Listen to the user messages
-	log.Fatalf("Failed to listen to the updates: %v", bot.listenUpdates(ctx, config))
+	log.Fatalf("Failed to listen to the updates: %v", bot.listenUpdates(ctx))
 }

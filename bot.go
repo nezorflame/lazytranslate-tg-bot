@@ -5,28 +5,28 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"strconv"
 	"strings"
 
 	"cloud.google.com/go/translate"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
 	"golang.org/x/text/language"
 )
 
 type botClient struct {
+	cfg        *viper.Viper
 	tgClient   *tgbotapi.BotAPI
 	gtClient   *translate.Client
 	targetLang language.Tag
 }
 
-func (b *botClient) listenUpdates(ctx context.Context, config *appConfig) error {
+func (b *botClient) listenUpdates(ctx context.Context) error {
 	// Setup the updates channel
 	conf := tgbotapi.NewUpdate(0)
-	conf.Timeout = config.updateTimeout
-	updates, err := b.tgClient.GetUpdatesChan(conf)
-	if err != nil {
-		return errors.Wrap(err, "unable to get bot updates")
-	}
+	conf.Timeout = b.cfg.GetInt("telegram.timeout")
+	updates := b.tgClient.GetUpdatesChan(conf)
 	defer b.tgClient.StopReceivingUpdates()
 
 	// Listen to the messages
@@ -45,7 +45,7 @@ func (b *botClient) listenUpdates(ctx context.Context, config *appConfig) error 
 		}
 
 		// only accept messages of the users from the whitelist
-		if !intInSlice(u.Message.From.ID, config.tgWhitelist) {
+		if !intInStringSlice(u.Message.From.ID, b.cfg.GetStringSlice("whitelist")) {
 			continue
 		}
 
@@ -55,7 +55,7 @@ func (b *botClient) listenUpdates(ctx context.Context, config *appConfig) error 
 		default:
 			go func(u *tgbotapi.Update) {
 				errChan := make(chan error)
-				updateCtx, cancel := context.WithTimeout(ctx, config.ctxTimeout)
+				updateCtx, cancel := context.WithTimeout(ctx, b.cfg.GetDuration("ctx_timeout"))
 				defer cancel()
 				go b.parseUpdate(updateCtx, errChan, u.Message)
 
@@ -170,9 +170,10 @@ func (b *botClient) doTranslate(ctx context.Context, targetLang language.Tag, te
 	return translations[0].Source.String(), html.UnescapeString(translations[0].Text), nil
 }
 
-func intInSlice(s int, ss []int) bool {
-	for i := range ss {
-		if ss[i] == s {
+func intInStringSlice(i int, ss []string) bool {
+	si := strconv.Itoa(i)
+	for _, s := range ss {
+		if s == si {
 			return true
 		}
 	}
