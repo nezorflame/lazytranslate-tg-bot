@@ -1,4 +1,4 @@
-# lazytranslate-tg-bot [![Build Status](https://travis-ci.org/nezorflame/lazytranslate-tg-bot.svg?branch=master)](https://travis-ci.org/nezorflame/lazytranslate-tg-bot) [![Go Report Card](https://goreportcard.com/badge/github.com/nezorflame/lazytranslate-tg-bot)](https://goreportcard.com/report/github.com/nezorflame/lazytranslate-tg-bot) [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot?ref=badge_shield)
+# lazytranslate-tg-bot [![Build Status](https://travis-ci.org/nezorflame/lazytranslate-tg-bot.svg?branch=master)](https://travis-ci.org/nezorflame/lazytranslate-tg-bot) [![Go Report Card](https://goreportcard.com/badge/github.com/nezorflame/lazytranslate-tg-bot)](https://goreportcard.com/report/github.com/nezorflame/lazytranslate-tg-bot) [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot?ref=badge_shield)
 
 Telegram bot for the lazy translation through the Google Translate API.
 
@@ -37,3 +37,6 @@ cd lazytranslate-tg-bot
 go build
 ./lazytranslate-tg-bot
 ```
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fnezorflame%2Flazytranslate-tg-bot?ref=badge_large)
